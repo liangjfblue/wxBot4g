@@ -1,0 +1,9 @@
+runmode: debug        # 开发模式, debug, release, test
+addr: 7788           # HTTP绑定端口
+name: wxBot4g        # Server的名字
+appKey: khr9348yo1oh
+retryTimes: 10
+
+wxbot4g:
+  wxqrDir: ./wxqr/
+  heartbeatURL: /v1/health/heartbeat
