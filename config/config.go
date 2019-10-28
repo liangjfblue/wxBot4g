@@ -26,6 +26,7 @@ type ServerConfig struct {
 type WxBot4gConfig struct {
 	WxQrDir      string `json:"wxqrDir"`
 	HeartbeatURL string `json:"heartbeatURL"`
+	ImageDir     string `json:"imageDir"`
 }
 
 var (
@@ -47,8 +48,9 @@ func init() {
 			RetryTimes: viper.GetInt("retryTimes"),
 		},
 		WxBot4gConf: &WxBot4gConfig{
-			WxQrDir: viper.GetString("wxbot4g.wxqrDir"),
+			WxQrDir:      viper.GetString("wxbot4g.wxqrDir"),
 			HeartbeatURL: viper.GetString("wxbot4g.heartbeatURL"),
+			ImageDir:     viper.GetString("wxbot4g.imageDir"),
 		},
 	}
 }
