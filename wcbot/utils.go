@@ -2,14 +2,14 @@ package wcbot
 
 import (
 	"fmt"
-	"wxBot4g/models"
 	"regexp"
 	"strings"
+	"wxBot4g/models"
 )
 
 func (wc *WcBot) isContact(uid string) bool {
 	for _, contact := range wc.contactList {
-		if uid == contact.(map[string]interface{})["UserName"].(string) {
+		if uid == contact.UserName {
 			return true
 		}
 	}
@@ -18,7 +18,7 @@ func (wc *WcBot) isContact(uid string) bool {
 
 func (wc *WcBot) isPublic(uid string) bool {
 	for _, contact := range wc.publicList {
-		if uid == contact.(map[string]interface{})["UserName"].(string) {
+		if uid == contact.UserName {
 			return true
 		}
 	}
@@ -27,46 +27,43 @@ func (wc *WcBot) isPublic(uid string) bool {
 
 func (wc *WcBot) isSpecial(uid string) bool {
 	for _, contact := range wc.specialList {
-		if uid == contact.(map[string]interface{})["UserName"].(string) {
+		if uid == contact.UserName {
 			return true
 		}
 	}
 	return false
 }
 
-func (wc *WcBot) getContactInfo(uid string) map[string]interface{} {
+func (wc *WcBot) getContactInfo(uid string) models.AccountInfo {
 	if _, ok := wc.accountInfo["normal_member"][uid]; ok {
-		return wc.accountInfo["normal_member"][uid].(map[string]interface{})
+		return wc.accountInfo["normal_member"][uid]
 	}
-	return nil
+	return models.AccountInfo{}
 }
 
-func (wc *WcBot) getGroupMemberInfo(uid string) map[string]interface{} {
+func (wc *WcBot) getGroupMemberInfo(uid string) models.AccountInfo {
 	if _, ok := wc.accountInfo["group_member"][uid]; ok {
-		return wc.accountInfo["group_member"][uid].(map[string]interface{})
+		return wc.accountInfo["group_member"][uid]
 	}
-	return nil
+	return models.AccountInfo{}
 }
 
 func (wc *WcBot) getContactName(uid string) *models.GroupMember {
 	info := wc.getContactInfo(uid)
-	if info == nil {
-		return nil
-	}
 
-	info = info["info"].(map[string]interface{})
+	//info = info["info"].(map[string]interface{})
 
 	var groupMember models.GroupMember
-	if remarkName, ok := info["RemarkName"]; ok {
-		groupMember.RemarkName = remarkName.(string)
+	if info.User.RemarkName != "" {
+		groupMember.RemarkName = info.User.RemarkName
 	}
 
-	if displayName, ok := info["DisplayName"]; ok {
-		groupMember.DisplayName = displayName.(string)
+	if info.User.DisplayName != "" {
+		groupMember.DisplayName = info.User.DisplayName
 	}
 
-	if nickname, ok := info["NickName"]; ok {
-		groupMember.Nickname = nickname.(string)
+	if info.User.NickName != "" {
+		groupMember.Nickname = info.User.NickName
 	}
 	return &groupMember
 }
@@ -115,30 +112,26 @@ param uid: 群聊成员id
 return: 名称信息，类似 {"display_name": "test_user", "nickname": "test", "remark_name": "for_test" }
 */
 func (wc *WcBot) getGroupMemberName(gid, uid string) *models.GroupMember {
-	group, ok := wc.groupMembers[gid]
+	groups, ok := wc.groupMembers[gid]
 	if !ok {
 		return nil
 	}
-	for _, memberr := range group.([]interface{}) {
-		if _, ok := memberr.(map[string]interface{}); ok {
-			member := memberr.(map[string]interface{})
-			if member["UserName"] == uid {
-				groupMember := new(models.GroupMember)
-				if remarkName, ok := member["remark_name"]; ok {
-					groupMember.RemarkName = remarkName.(string)
-				}
-
-				if displayName, ok := member["display_name"]; ok {
-					groupMember.RemarkName = displayName.(string)
-				}
-
-				if nickname, ok := member["nickname"]; ok {
-					groupMember.RemarkName = nickname.(string)
-				}
-				return groupMember
+	for _, group := range groups {
+		if group.UserName == uid {
+			groupMember := new(models.GroupMember)
+			if group.RemarkName != "" {
+				groupMember.RemarkName = group.RemarkName
 			}
-		} else {
-			return nil
+
+			if group.DisplayName != "" {
+				groupMember.DisplayName = group.DisplayName
+			}
+
+			if group.NickName != "" {
+				groupMember.Nickname = group.NickName
+			}
+
+			return groupMember
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package wcbot
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,13 +12,15 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"wxBot4g/config"
 	"wxBot4g/models"
 	"wxBot4g/pkg/httpClient"
+	"wxBot4g/pkg/utils"
+
+	"github.com/mdp/qrterminal"
 
 	"github.com/gin-gonic/gin"
 
@@ -26,22 +29,24 @@ import (
 	"github.com/beevik/etree"
 	"github.com/sirupsen/logrus"
 	"github.com/skip2/go-qrcode"
+	qrcodetl "github.com/tuotoo/qrcode"
 )
 
 type HandleMsgAll func(models.RealRecvMsg)
 
 type WcBot struct {
-	Debug       bool
-	uuid        string
-	baseUri     string
-	baseHost    string
-	redirectUri string
-	uin         string
-	sid         string
-	sKey        string
-	passTicket  string
-	deviceId    string
-	Cookies     []*http.Cookie
+	Debug          bool
+	QrCodeTerminal bool
+	uuid           string
+	baseUri        string
+	baseHost       string
+	redirectUri    string
+	uin            string
+	sid            string
+	sKey           string
+	passTicket     string
+	deviceId       string
+	Cookies        []*http.Cookie
 
 	baseRequest         map[string]interface{}
 	syncKeyStr          string
@@ -57,15 +62,15 @@ type WcBot struct {
 	httpClient          *httpClient.Client
 	conf                map[string]interface{}
 	myAccount           map[string]interface{}
-	chatSet             string                            //当前登录用户
-	memberList          []interface{}                     //所有相关账号: 联系人, 公众号, 群组, 特殊账号
-	groupMembers        map[string]interface{}            //所有群组的成员, {'group_id1': [member1, member2, ...], ...}
-	accountInfo         map[string]map[string]interface{} //所有账户, {'group_member':{'id':{'type':'group_member', 'info':{}}, ...}, 'normal_member':{'id':{}, ...}}
-	contactList         []interface{}                     // 联系人列表
-	publicList          []interface{}                     // 公众账号列表
-	groupList           []interface{}                     // 群聊列表
-	specialList         []interface{}                     // 特殊账号列表
-	encryChatRoomIdList map[string]interface{}            // 存储群聊的EncryChatRoomId，获取群内成员头像时需要用到
+	chatSet             string                                   //当前登录用户
+	memberList          []models.User                            //所有相关账号: 联系人, 公众号, 群组, 特殊账号
+	groupMembers        map[string][]models.User                 //所有群组的成员, {'group_id1': [member1, member2, ...], ...}
+	accountInfo         map[string]map[string]models.AccountInfo //所有账户, {'group_member':{'id':{'type':'group_member', 'info':{}}, ...}, 'normal_member':{'id':{}, ...}}
+	contactList         []models.User                            // 联系人列表
+	publicList          []models.User                            // 公众账号列表
+	groupList           []models.User                            // 群聊列表
+	specialList         []models.User                            // 特殊账号列表
+	encryChatRoomIdList map[string]string                        // 存储群聊的EncryChatRoomId，获取群内成员头像时需要用到
 	groupIdName         map[string]interface{}
 	fileIndex           int
 	send2oss            bool
@@ -74,10 +79,11 @@ type WcBot struct {
 }
 
 var (
-	UNKONWN = "unkonwn"
-	SUCCESS = "200"
-	SCANED  = "201"
-	TIMEOUT = "408"
+	UNKONWN   = "unkonwn"
+	SUCCESS   = "200"
+	SCANED    = "201"
+	TIMEOUT   = "408"
+	ERRSYSTEM = "500"
 )
 
 var (
@@ -87,6 +93,7 @@ var (
 func New(handleMsgAll HandleMsgAll) *WcBot {
 	wcBot := new(WcBot)
 	wcBot.Debug = true
+	wcBot.QrCodeTerminal = false
 	wcBot.uuid = ""
 	wcBot.baseUri = ""
 	wcBot.baseHost = ""
@@ -113,18 +120,18 @@ func New(handleMsgAll HandleMsgAll) *WcBot {
 
 	wcBot.chatSet = ""
 	wcBot.myAccount = make(map[string]interface{})
-	wcBot.memberList = make([]interface{}, 0)
-	wcBot.groupMembers = make(map[string]interface{})
+	wcBot.memberList = make([]models.User, 0)
+	wcBot.groupMembers = make(map[string][]models.User)
 
-	wcBot.accountInfo = make(map[string]map[string]interface{})
-	wcBot.accountInfo["group_member"] = make(map[string]interface{})
-	wcBot.accountInfo["normal_member"] = make(map[string]interface{})
+	wcBot.accountInfo = make(map[string]map[string]models.AccountInfo)
+	wcBot.accountInfo["normal_member"] = make(map[string]models.AccountInfo)
+	wcBot.accountInfo["group_member"] = make(map[string]models.AccountInfo)
 
-	wcBot.contactList = make([]interface{}, 0)
-	wcBot.publicList = make([]interface{}, 0)
-	wcBot.groupList = make([]interface{}, 0)
-	wcBot.specialList = make([]interface{}, 0)
-	wcBot.encryChatRoomIdList = make(map[string]interface{})
+	wcBot.contactList = make([]models.User, 0)
+	wcBot.publicList = make([]models.User, 0)
+	wcBot.groupList = make([]models.User, 0)
+	wcBot.specialList = make([]models.User, 0)
+	wcBot.encryChatRoomIdList = make(map[string]string)
 	wcBot.groupIdName = make(map[string]interface{})
 	wcBot.fileIndex = 0
 	wcBot.send2oss = false
@@ -144,6 +151,10 @@ func New(handleMsgAll HandleMsgAll) *WcBot {
 	return wcBot
 }
 
+func (wc *WcBot) QrCodeInTerminal() {
+	wc.QrCodeTerminal = true
+}
+
 func initHttpServer() {
 	g := gin.New()
 	gin.SetMode(config.Config.ServerConf.Mode)
@@ -153,7 +164,12 @@ func initHttpServer() {
 		c.String(http.StatusNotFound, "The incorrect API route")
 	})
 
-	g.GET(config.Config.WxBot4gConf.HeartbeatURL, Text)
+	g.GET(config.Config.WxBot4gConf.HeartbeatURL, TextHandle)
+	v1 := g.Group("/v1/msg")
+	{
+		v1.GET("/text", TextHandle)
+		v1.POST("/image", ImageHandle)
+	}
 
 	go InitHeartbeatCron()
 
@@ -172,7 +188,7 @@ func (wc *WcBot) Run() {
 	}
 
 	if code := wc.wait4login(); code != SUCCESS {
-		logrus.Error("web wechat login failed, failed code=%s", code)
+		logrus.Error("web wechat login failed, failed code=", code)
 		wc.status = "loginout"
 		return
 	}
@@ -225,13 +241,11 @@ func (wc *WcBot) getUuid() error {
 	}
 
 	regx := `window.QRLogin.code = (\d+); window.QRLogin.uuid = "(\S+?)"`
-	reg := regexp.MustCompile(regx)
-	pm := reg.FindAllStringSubmatch(string(data), -1)
-
+	pm := utils.RegexpMatchStr(regx, string(data))
 	if pm != nil && pm[0] != nil && len(pm[0]) >= 3 {
 		code := pm[0][1]
 		wc.uuid = pm[0][2]
-		if code == "200" {
+		if code == SUCCESS {
 			return nil
 		} else {
 			return errors.New(fmt.Sprintf("error code is : %s", code))
@@ -241,13 +255,28 @@ func (wc *WcBot) getUuid() error {
 }
 
 func (wc *WcBot) genQrCode(filePath string) error {
-	urlStr := "https://login.weixin.qq.com/l/" + wc.uuid
-
-	if err := qrcode.WriteFile(urlStr, qrcode.High, 256, filePath); err != nil {
-		logrus.Error(err)
-		return err
-	}
 	//wc.show_image(filePath)
+	if wc.QrCodeTerminal {
+		urlStr := "https://login.weixin.qq.com/qrcode/" + wc.uuid
+		data, err := wc.httpClient.Get(urlStr, nil)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+		M, err := qrcodetl.Decode(bytes.NewReader(data))
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+		qrterminal.GenerateHalfBlock(M.Content, qrterminal.M, os.Stdout)
+	} else {
+		urlStr := "https://login.weixin.qq.com/l/" + wc.uuid
+		if err := qrcode.WriteFile(urlStr, qrcode.High, 256, filePath); err != nil {
+			logrus.Error(err)
+			return err
+		}
+	}
+
 	logrus.Info("please use WeChat to scan the QR code")
 	return nil
 }
@@ -275,7 +304,7 @@ func (wc *WcBot) wait4login() string {
 
 		if err != nil {
 			logrus.Error(err.Error())
-			return "500"
+			return ERRSYSTEM
 		}
 
 		switch code {
@@ -289,16 +318,13 @@ func (wc *WcBot) wait4login() string {
 			time.Sleep(time.Duration(tryLaterSecs))
 		case SUCCESS:
 			regx := `window.redirect_uri="(\S+?)";`
-			reg := regexp.MustCompile(regx)
-
-			param := reg.FindAllStringSubmatch(string(data), -1)
+			param := utils.RegexpMatchStr(regx, string(data))
 			if len(param) < 1 || len(param[0]) < 2 {
 				err = errors.New("param less 1 param or param[0] less 2")
-				return "500"
+				return ERRSYSTEM
 			}
-			redirectUrl := param[0][1] + `&fun=new&version=v2`
-			wc.redirectUri = redirectUrl
-			wc.baseUri = redirectUrl[:strings.LastIndex(redirectUrl, "/")]
+			wc.redirectUri = param[0][1] + `&fun=new&version=v2`
+			wc.baseUri = wc.redirectUri[:strings.LastIndex(wc.redirectUri, "/")]
 			tempHost := wc.baseUri[8:]
 			wc.baseHost = tempHost[:strings.Index(tempHost, "/")]
 			return code
@@ -455,7 +481,7 @@ func (wc *WcBot) statusNotify() bool {
 }
 
 func (wc *WcBot) getContact() bool {
-	dicList := make([]interface{}, 0)
+	contactMap := make(map[string]models.User, 0)
 	urlStr := wc.baseUri + fmt.Sprintf("/webwxgetcontact?lang=zh_CN&seq=%s&pass_ticket=%s&skey=%s&r=%s",
 		"0", wc.passTicket, wc.sKey, strconv.Itoa(int(time.Now().Unix())))
 
@@ -466,38 +492,41 @@ func (wc *WcBot) getContact() bool {
 		return false
 	}
 
-	mData := make(map[string]interface{})
-	if err := json.Unmarshal(data, &mData); err != nil {
-		logrus.Error(err.Error())
+	var contactList models.ContactList
+	err = json.Unmarshal(data, &contactList)
+	if err != nil {
+		logrus.Error(err)
 		return false
 	}
 
-	dicList = append(dicList, mData)
+	for i := 0; i < contactList.MemberCount; i++ {
+		contactMap[contactList.MemberList[i].UserName] = contactList.MemberList[i]
+	}
 
-	for int(mData["Seq"].(float64)) != 0 {
-		logrus.Info(fmt.Sprintf("Geting contacts. Get %s contacts for now", mData["MemberCount"].(string)))
+	for contactList.Seq != 0 {
+		logrus.Info(fmt.Sprintf("Geting contacts. Get %d contacts for now", contactList.MemberCount))
 
 		urlStr := wc.baseUri + fmt.Sprintf("/webwxgetcontact?seq=%s&pass_ticket=%s&skey=%s&r=%d",
-			mData["Seq"].(string), wc.passTicket, wc.sKey, int(time.Now().Unix()))
+			strconv.Itoa(contactList.Seq), wc.passTicket, wc.sKey, int(time.Now().Unix()))
 		data, err := wc.httpClient.Post(urlStr, nil)
 		if err != nil {
 			logrus.Error(err.Error())
 			return false
 		}
 
-		mData := make(map[string]interface{})
-		if err := json.Unmarshal(data, &mData); err != nil {
-			logrus.Error(err.Error())
+		var contactList models.ContactList
+		err = json.Unmarshal(data, &contactList)
+		if err != nil {
+			logrus.Error(err)
 			return false
 		}
-		dicList = append(dicList, mData)
+
+		for i := 0; i < contactList.MemberCount; i++ {
+			contactMap[contactList.MemberList[i].UserName] = contactList.MemberList[i]
+		}
 	}
 
-	wc.memberList = make([]interface{}, 0)
-
-	for _, value := range dicList {
-		wc.memberList = append(wc.memberList, value.(map[string]interface{})["MemberList"].([]interface{}))
-	}
+	wc.memberList = append(wc.memberList, contactList.MemberList...)
 
 	specialUsers := map[string]bool{
 		"newsapp": true, "fmessage": true, "filehelper": true, "weibo": true, "qqmail": true,
@@ -509,36 +538,28 @@ func (wc *WcBot) getContact() bool {
 		"gh_22b87fa7cb3c": true, "wxitil": true, "userexperience_alarm": true, "notification_messages": true,
 	}
 
-	wc.contactList = make([]interface{}, 0)
-	wc.publicList = make([]interface{}, 0)
-	wc.specialList = make([]interface{}, 0)
-	wc.groupList = make([]interface{}, 0)
-
 	if len(wc.memberList) <= 0 {
 		return false
 	}
 
-	for _, contacts := range wc.memberList {
-		for _, contact := range contacts.([]interface{}) {
-			mContact := contact.(map[string]interface{})
-			if int(mContact["VerifyFlag"].(float64))&8 != 0 {
-				// 公众号
-				wc.publicList = append(wc.publicList, contact)
-				wc.accountInfo["normal_member"][mContact["UserName"].(string)] = map[string]interface{}{"type": "public", "info": mContact}
-			} else if _, ok := specialUsers[mContact["UserName"].(string)]; ok {
-				// 特殊账户
-				wc.accountInfo["normal_member"][mContact["UserName"].(string)] = map[string]interface{}{"type": "special", "info": mContact}
-			} else if strings.Contains(mContact["UserName"].(string), "@@") {
-				// 群聊
-				wc.groupList = append(wc.groupList, mContact)
-				wc.accountInfo["normal_member"][mContact["UserName"].(string)] = map[string]interface{}{"type": "group", "info": mContact}
-			} else if mContact["UserName"].(string) == wc.myAccount["UserName"].(string) {
-				// 自己
-				wc.accountInfo["normal_member"][mContact["UserName"].(string)] = map[string]interface{}{"type": "self", "info": mContact}
-			} else {
-				wc.contactList = append(wc.contactList, mContact)
-				wc.accountInfo["normal_member"][mContact["UserName"].(string)] = map[string]interface{}{"type": "contact", "info": mContact}
-			}
+	for _, user := range wc.memberList {
+		if user.VerifyFlag&8 != 0 {
+			// 公众号
+			wc.publicList = append(wc.publicList, user)
+			wc.accountInfo["normal_member"][user.UserName] = models.AccountInfo{Type: "public", User: user}
+		} else if _, ok := specialUsers[user.UserName]; ok {
+			// 特殊账户
+			wc.accountInfo["normal_member"][user.UserName] = models.AccountInfo{Type: "special", User: user}
+		} else if strings.Contains(user.UserName, "@@") {
+			// 群聊
+			wc.groupList = append(wc.groupList, user)
+			wc.accountInfo["normal_member"][user.UserName] = models.AccountInfo{Type: "group", User: user}
+		} else if user.UserName == wc.myAccount["UserName"].(string) {
+			// 自己
+			wc.accountInfo["normal_member"][user.UserName] = models.AccountInfo{Type: "self", User: user}
+		} else {
+			wc.contactList = append(wc.contactList, user)
+			wc.accountInfo["normal_member"][user.UserName] = models.AccountInfo{Type: "contact", User: user}
 		}
 	}
 
@@ -547,11 +568,10 @@ func (wc *WcBot) getContact() bool {
 		return false
 	}
 
-	for _, group := range wc.groupMembers {
-		for _, one := range group.([]interface{}) {
-			member := one.(map[string]interface{})
-			if _, ok := wc.accountInfo["normal_member"][member["UserName"].(string)]; !ok {
-				wc.accountInfo["group_member"][member["UserName"].(string)] = map[string]interface{}{"type": "group_member", "info": member, "group": group}
+	for _, groups := range wc.groupMembers {
+		for _, group := range groups {
+			if _, ok := wc.accountInfo["normal_member"][group.UserName]; !ok {
+				wc.accountInfo["group_member"][group.UserName] = models.AccountInfo{Type: "contact", User: group, Group: group}
 			}
 		}
 	}
@@ -629,9 +649,7 @@ func (wc *WcBot) doRequest(url string) (code string, data []byte, err error) {
 		return
 	}
 	regx := `window.code=(\d+);`
-	reg := regexp.MustCompile(regx)
-
-	codes := reg.FindAllStringSubmatch(string(data), -1)
+	codes := utils.RegexpMatchStr(regx, string(data))
 	if len(codes) < 1 || len(codes[0]) < 2 {
 		err = errors.New("codes less 1 param or codes[0] less 2")
 		return
@@ -658,7 +676,7 @@ func (wc *WcBot) batchGetGroupMembers() error {
 			UserName        string `json:"UserName"`
 			EncryChatRoomId string `json:"EncryChatRoomId"`
 		}{
-			group.(map[string]interface{})["UserName"].(string),
+			group.UserName,
 			"",
 		})
 	}
@@ -669,20 +687,20 @@ func (wc *WcBot) batchGetGroupMembers() error {
 		return err
 	}
 
-	mData := make(map[string]interface{})
-	if err := json.Unmarshal(data, &mData); err != nil {
-		logrus.Error(err.Error())
+	var groupList models.GroupList
+	err = json.Unmarshal(data, &groupList)
+	if err != nil {
+		logrus.Error(err)
 		return err
 	}
 
-	groupMembers := make(map[string]interface{})
-	encryChatRoomId := make(map[string]interface{})
+	groupMembers := make(map[string][]models.User)
+	encryChatRoomId := make(map[string]string)
 
-	for _, group := range mData["ContactList"].([]interface{}) {
-		gid := group.(map[string]interface{})["UserName"].(string)
-		members := group.(map[string]interface{})["MemberList"].([]interface{})
-		groupMembers[gid] = members
-		encryChatRoomId[gid] = group.(map[string]interface{})["EncryChatRoomId"].(string)
+	for _, group := range groupList.MemberList {
+		gid := group.UserName
+		groupMembers[gid] = groupList.MemberList
+		encryChatRoomId[gid] = group.EncryChatRoomId
 	}
 
 	wc.groupMembers = groupMembers
@@ -734,9 +752,7 @@ func (wc *WcBot) syncCheck() (string, string, error) {
 	}
 
 	regx := `window.synccheck=\{retcode:"(\d+)",selector:"(\d+)"\}`
-	reg := regexp.MustCompile(regx)
-	pm := reg.FindAllStringSubmatch(string(data), -1)
-
+	pm := utils.RegexpMatchStr(regx, string(data))
 	if pm != nil && pm[0] != nil && len(pm[0]) >= 3 {
 		retCode := pm[0][1]
 		selector := pm[0][2]
@@ -788,30 +804,30 @@ func (wc *WcBot) GetUserId(name string) string {
 	}
 
 	for _, contact := range wc.contactList {
-		if remarkName, ok := contact.(map[string]interface{})["RemarkName"]; ok && name == remarkName.(string) {
-			return contact.(map[string]interface{})["UserName"].(string)
+		if contact.RemarkName != "" && name == contact.RemarkName {
+			return contact.UserName
 		}
 
-		if displayName, ok := contact.(map[string]interface{})["DisplayName"]; ok && name == displayName.(string) {
-			return contact.(map[string]interface{})["UserName"].(string)
+		if contact.DisplayName != "" && name == contact.DisplayName {
+			return contact.UserName
 		}
 
-		if nickname, ok := contact.(map[string]interface{})["NickName"]; ok && name == nickname.(string) {
-			return contact.(map[string]interface{})["UserName"].(string)
+		if contact.NickName != "" && name == contact.NickName {
+			return contact.UserName
 		}
 	}
 
 	for _, group := range wc.groupList {
-		if remarkName, ok := group.(map[string]interface{})["RemarkName"]; ok && name == remarkName.(string) {
-			return group.(map[string]interface{})["UserName"].(string)
+		if group.RemarkName != "" && name == group.RemarkName {
+			return group.UserName
 		}
 
-		if displayName, ok := group.(map[string]interface{})["DisplayName"]; ok && name == displayName.(string) {
-			return group.(map[string]interface{})["UserName"].(string)
+		if group.DisplayName != "" && name == group.DisplayName {
+			return group.UserName
 		}
 
-		if nickname, ok := group.(map[string]interface{})["NickName"]; ok && name == nickname.(string) {
-			return group.(map[string]interface{})["UserName"].(string)
+		if group.NickName != "" && name == group.NickName {
+			return group.UserName
 		}
 	}
 

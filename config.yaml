@@ -7,3 +7,5 @@ retryTimes: 10
 wxbot4g:
   wxqrDir: ./wxqr/
   heartbeatURL: /v1/health/heartbeat
+  imageDir2: F:/go_home/project/wxBot4g/imageDir/
+  imageDir: ./imageDir/

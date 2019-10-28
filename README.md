@@ -1,22 +1,5 @@
 wxBot4g 是基于go的微信机器人
 
-本项目长期维护更新，欢迎star、fork、 pull requests、 issue
-
-## 来源
-[wxBot](https://github.com/liuwons/wxBot)是一个非常优秀的开源微信个人号接口，使用Python语言开发。[wxBot4g](https://github.com/liuwons/wxBot)是[wxBot](https://github.com/liuwons/wxBot)基于go的版本。
-
-## 项目用途
-- 把个人微信号扩展为神奇的"机器人"，自动回复？哄女朋友？just小case。
-- 集成在你自己的项目中，为应用提供微信机器人的能力。
-- 记录自己客服群的情况，不错过每个好评，更不错过每个差评。
-- 控制智能设备，真正实现“物联网”。
-
-## 特点
-- 1、简单易用。实现消息回调函数，实例化wcbot，wcbot.run()即可。
-- 2、稳定不断线。底层实现了“心跳”维持微信会话机制，对用户透明。
-- 3、提供restful api。支持发送消息到指定群和指定好友。
-- 4、依赖包少而简洁。
-
 ## 技术
 - gin（http框架）
 - cron（定时任务）
@@ -44,7 +27,7 @@ wxBot4g 是基于go的微信机器人
 - [ ] 动画
 
 ### TODO功能
-- [ ] 提供restful api，发送消息到指定好友/群
+- [x] 提供restful api，发送消息到指定好友/群
 - [ ] 文件/图片上传阿里云oss
 - [ ] 监听指定群报警
 - [ ] 聊天记录中文分析，情感分析
@@ -112,8 +95,14 @@ wxBot4g 是基于go的微信机器人
 11|Empty|内容，未支持
 99|Unknown|未支持
 
+## 功能api
+### 发送文本消息(好友/群)
+```http://127.0.0.1:7788/v1/msg/text?to=测试群&word=你好, 测试一下&appKey=khr1244o1oh```
 
-## 参考
-- [挖掘微信Web版通信的全过程](http://www.tanhao.me/talk/1466.html/)
-- [Python网页微信API](https://github.com/liuwons/wxBot)
-- [微信个人号机器人](https://github.com/newflydd/itchat4go)
+### 发送图片消息(好友/群)
+请参考```wxBot4g/wcbot/imageHandle_test.go```
+
+v1.1
+- 增加终端二维码扫码登录
+- 增加api，发送文本、图片消息到指定群
+- 增加单元测试

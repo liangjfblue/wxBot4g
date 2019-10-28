@@ -19,5 +19,6 @@ func HandleMsg(msg models.RealRecvMsg) {
 func main() {
 	bot := wcbot.New(HandleMsg)
 	bot.Debug = true
+	bot.QrCodeInTerminal() //默认在 wxqr 目录生成二维码，调用此函数，在终端打印二维码
 	bot.Run()
 }
