@@ -47,8 +47,16 @@ type ContactList struct {
 
 // GroupList 微信获取所有群列表
 type GroupList struct {
+	Count       int         `json:"Count"`
+	ContactList []GroupUser `json:"ContactList"`
+}
+
+type GroupUser struct {
+	Uin         int    `json:"Uin"`
+	UserName    string `json:"UserName"` //群唯一标识（每次登陆变化）
+	NickName    string `json:"NickName"`
 	MemberCount int    `json:"MemberCount"`
-	MemberList  []User `json:"ContactList"`
+	MemberList  []User `json:"MemberList"`
 }
 
 // User 微信通用User结构

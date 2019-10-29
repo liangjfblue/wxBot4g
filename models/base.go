@@ -25,9 +25,11 @@ func (sks SyncKeysJsonData) ToString() string {
 
 // RecvMsgs 微信消息对象列表
 type RecvMsgs struct {
-	MsgCount int              `json:"AddMsgCount"`
-	MsgList  []RecvMsg        `json:"AddMsgList"`
-	SyncKeys SyncKeysJsonData `json:"SyncKey"`
+	MsgCount        int              `json:"AddMsgCount"`
+	MsgList         []RecvMsg        `json:"AddMsgList"`
+	SyncKeys        SyncKeysJsonData `json:"SyncKey"`
+	ModContactCount int              `json:"ModContactCount"`
+	ModContactList  []interface{}    `json:"ModContactList"`
 }
 
 // RecvMsg 微信消息对象

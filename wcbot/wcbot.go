@@ -213,7 +213,7 @@ func (wc *WcBot) Run() {
 		logrus.Info("failed: web wechat status notify")
 	}
 
-	if ok := wc.getContact(); ok {
+	if ok := wc.GetContact(false, ""); ok == "unknown" {
 		logrus.Info(fmt.Sprintf("Get %d contacts", len(wc.contactList)))
 		logrus.Info("succeed: start to process messages")
 	}
@@ -480,7 +480,7 @@ func (wc *WcBot) statusNotify() bool {
 	return ret
 }
 
-func (wc *WcBot) getContact() bool {
+func (wc *WcBot) GetContact(isUnknow bool, uId string) string {
 	contactMap := make(map[string]models.User, 0)
 	urlStr := wc.baseUri + fmt.Sprintf("/webwxgetcontact?lang=zh_CN&seq=%s&pass_ticket=%s&skey=%s&r=%s",
 		"0", wc.passTicket, wc.sKey, strconv.Itoa(int(time.Now().Unix())))
@@ -489,14 +489,14 @@ func (wc *WcBot) getContact() bool {
 	data, err := wc.httpClient.Post(urlStr, nil)
 	if err != nil {
 		logrus.Error(err.Error())
-		return false
+		return ""
 	}
 
 	var contactList models.ContactList
 	err = json.Unmarshal(data, &contactList)
 	if err != nil {
 		logrus.Error(err)
-		return false
+		return ""
 	}
 
 	for i := 0; i < contactList.MemberCount; i++ {
@@ -511,14 +511,14 @@ func (wc *WcBot) getContact() bool {
 		data, err := wc.httpClient.Post(urlStr, nil)
 		if err != nil {
 			logrus.Error(err.Error())
-			return false
+			return ""
 		}
 
 		var contactList models.ContactList
 		err = json.Unmarshal(data, &contactList)
 		if err != nil {
 			logrus.Error(err)
-			return false
+			return ""
 		}
 
 		for i := 0; i < contactList.MemberCount; i++ {
@@ -539,7 +539,7 @@ func (wc *WcBot) getContact() bool {
 	}
 
 	if len(wc.memberList) <= 0 {
-		return false
+		return ""
 	}
 
 	for _, user := range wc.memberList {
@@ -565,18 +565,43 @@ func (wc *WcBot) getContact() bool {
 
 	if err := wc.batchGetGroupMembers(); err != nil {
 		logrus.Error(err)
-		return false
+		return ""
+	}
+
+	if wc.Debug {
+		if err = utils.WriteFile(wc.tempPwd+"groupList.json", wc.groupList); err != nil {
+			logrus.Error(err)
+			return ""
+		}
+
+		if err = utils.WriteFile(wc.tempPwd+"accountInfo.json", wc.accountInfo); err != nil {
+			logrus.Error(err)
+			return ""
+		}
 	}
 
 	for _, groups := range wc.groupMembers {
 		for _, group := range groups {
 			if _, ok := wc.accountInfo["normal_member"][group.UserName]; !ok {
 				wc.accountInfo["group_member"][group.UserName] = models.AccountInfo{Type: "contact", User: group, Group: group}
+
+				//暂时不在此获取昵称，请调用GetGroupUserName
+				//if isUnknow && uId != "" {
+				//	if uId == group.UserName {
+				//		return group.UserName
+				//	} else if uId == group.DisplayName {
+				//		return group.DisplayName
+				//	} else if uId == group.NickName {
+				//		return group.NickName
+				//	} else {
+				//		return "unknown"
+				//	}
+				//}
 			}
 		}
 	}
 
-	return true
+	return "unknown"
 }
 
 func (wc *WcBot) procMsgLoop() {
@@ -658,6 +683,54 @@ func (wc *WcBot) doRequest(url string) (code string, data []byte, err error) {
 	return
 }
 
+/**
+{
+    "BaseResponse":{
+        "Ret":0,
+        "ErrMsg":""
+    },
+    "Count":10,
+    "ContactList":[
+        {
+            "Uin":0,
+            "UserName":"@@40bccd2526c469d875a325076c1afefc35b1f0a677aa6f266a019ff8d4cd1aae",
+            "NickName":"吃货群",
+            "HeadImgUrl":"/cgi-bin/mmwebwx-bin/webwxgetheadimg?seq=657825175&username=@@40bccd2526c469d875a325076c1afefc35b1f0a677aa6f266a019ff8d4cd1aae&skey=",
+            "ContactFlag":3,
+            "MemberCount":6,
+            "MemberList":[
+                {
+                    "Uin":0,
+                    "UserName":"@2c301cc8ad2d753b22cac512b13de1be",
+                    "NickName":"阿花 <span class="emoji emoji1f33b"></span>",
+                    "AttrStatus":33784319,
+                    "PYInitial":"",
+                    "PYQuanPin":"",
+                    "RemarkPYInitial":"",
+                    "RemarkPYQuanPin":"",
+                    "MemberStatus":0,
+                    "DisplayName":"",
+                    "KeyWord":"blu"
+                },
+                {
+                    "Uin":0,
+                    "UserName":"@a42ee05b2f48f05ad8e5caff36c72972",
+                    "NickName":"子杰",
+                    "AttrStatus":242279,
+                    "PYInitial":"",
+                    "PYQuanPin":"",
+                    "RemarkPYInitial":"",
+                    "RemarkPYQuanPin":"",
+                    "MemberStatus":0,
+                    "DisplayName":"",
+                    "KeyWord":"jzz"
+                },
+			//...
+		}
+		//...
+	]
+}
+*/
 func (wc *WcBot) batchGetGroupMembers() error {
 	urlStr := wc.baseUri + fmt.Sprintf("/webwxbatchgetcontact?type=ex&r=%s&pass_ticket=%s",
 		strconv.Itoa(int(time.Now().Unix())), wc.passTicket)
@@ -697,14 +770,30 @@ func (wc *WcBot) batchGetGroupMembers() error {
 	groupMembers := make(map[string][]models.User)
 	encryChatRoomId := make(map[string]string)
 
-	for _, group := range groupList.MemberList {
+	if wc.Debug {
+		if err = utils.WriteFile(wc.tempPwd+"batchGetGroupMembers.json", data); err != nil {
+			logrus.Error(err)
+			return err
+		}
+	}
+
+	for _, group := range groupList.ContactList {
 		gid := group.UserName
-		groupMembers[gid] = groupList.MemberList
-		encryChatRoomId[gid] = group.EncryChatRoomId
+		for _, member := range group.MemberList {
+			groupMembers[gid] = append(groupMembers[gid], member)
+			encryChatRoomId[gid] = member.EncryChatRoomId
+		}
 	}
 
 	wc.groupMembers = groupMembers
 	wc.encryChatRoomIdList = encryChatRoomId
+
+	if wc.Debug {
+		if err = utils.WriteFile(wc.tempPwd+"groupMembers.json", wc.groupMembers); err != nil {
+			logrus.Error(err)
+			return err
+		}
+	}
 
 	return nil
 }
@@ -795,6 +884,14 @@ func (wc *WcBot) sync() (models.RecvMsgs, error) {
 	wc.syncKey = wxMsges.SyncKeys
 	wc.syncKeyStr = wxMsges.SyncKeys.ToString()
 
+	if wxMsges.ModContactCount == 1 && len(wxMsges.ModContactList) > 0 {
+		groupName := wxMsges.ModContactList[0].(map[string]interface{})["NickName"].(string)
+		if groupName != "" {
+			groupId := wxMsges.ModContactList[0].(map[string]interface{})["UserName"].(string)
+			wc.groupIdName[groupId] = groupName
+		}
+	}
+
 	return wxMsges, nil
 }
 
@@ -876,7 +973,6 @@ func (wc *WcBot) extractMsgContent(msgTypeId int, msg models.RecvMsg) models.Con
 	} else if msgTypeId == 3 {
 		//群聊
 		sp := strings.Index(content, `<br/>`)
-
 		uId := content[:sp]
 		content = content[sp:]
 		content = strings.Replace(content, `<br/>`, "", -1)
@@ -1029,7 +1125,7 @@ func (wc *WcBot) extractMsgContent(msgTypeId int, msg models.RecvMsg) models.Con
 		msgContent.Type = 99
 		msgContent.Data = content
 		if wc.Debug {
-			logrus.Infof("%s[Unknown]", msgPrefix)
+			logrus.Warnf("[Unknown] msg content type:%d", 99)
 		}
 	}
 
