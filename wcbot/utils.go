@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"wxBot4g/models"
+
+	"github.com/sirupsen/logrus"
 )
 
 func (wc *WcBot) isContact(uid string) bool {
@@ -135,6 +137,30 @@ func (wc *WcBot) getGroupMemberName(gid, uid string) *models.GroupMember {
 		}
 	}
 	return nil
+}
+
+func (wc *WcBot) GetGroupUserName(uId string) string {
+	if uId == "" {
+		return "unknown"
+	}
+	if err := wc.batchGetGroupMembers(); err != nil {
+		logrus.Error(err)
+		return "unknown"
+	}
+	for _, groupUsers := range wc.groupMembers {
+		for _, user := range groupUsers {
+			if uId == user.UserName {
+				if uId == user.DisplayName {
+					return user.DisplayName
+				} else if uId == user.NickName {
+					return user.NickName
+				} else {
+					return "unknown"
+				}
+			}
+		}
+	}
+	return "unknown"
 }
 
 func (wc *WcBot) searchContent(key, content, fmat string) string {

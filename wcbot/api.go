@@ -139,7 +139,9 @@ func (wc *WcBot) SendMediaMsgByUid(filepath, to string) error {
 			msg["Type"] = 47
 			msg["MediaId"] = media
 			msg["EmojiFlag"] = 2
-			//SendMsgEmoticon(msg)
+			if err := wc.sendMsgEmoticon(msg); err != nil {
+				return err
+			}
 		} else {
 			msg["Type"] = 3
 			msg["MediaId"] = media
@@ -152,11 +154,15 @@ func (wc *WcBot) SendMediaMsgByUid(filepath, to string) error {
 		if filetype.IsVideo(buf) {
 			msg["Type"] = 43
 			msg["MediaId"] = media
-			//SendMsgVideo(msg)
+			if err := wc.sendMsgVideo(msg); err != nil {
+				return err
+			}
 		} else {
 			msg["Type"] = 6
 			msg[`Content`] = fmt.Sprintf(`<appmsg appid='wxeb7ec651dd0aefa9' sdkver=''><title>%s</title><des></des><action></action><type>6</type><content></content><url></url><lowurl></lowurl><appattach><totallen>10</totallen><attachid>%s</attachid><fileext>%s</fileext></appattach><extinfo></extinfo></appmsg>`, info.Name(), media, kind.Extension)
-			//SendMsgFile(msg)
+			if err := wc.sendMsgFile(msg); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -277,6 +283,72 @@ func (wc *WcBot) sendMsgImage(con map[string]interface{}) error {
 	jCon, err := json.Marshal(con)
 	if err != nil {
 		logrus.Error(err)
+		return err
+	}
+	body := fmt.Sprintf(`{"BaseRequest":{"Uin":%s,"Sid":"%s","Skey":"%s","DeviceID":"%s"},"Msg":%s,"Scene":0}`,
+		wc.uin, wc.sid, wc.sKey, wc.deviceId, jCon)
+
+	header := make(map[string]string)
+	header["Content-Type"] = `application/json;charset=UTF-8`
+	wc.httpClient.SetHeader(header)
+
+	_, err = wc.httpClient.PostString(strUrl, body)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	wc.httpClient.DelHeader(header)
+	return nil
+}
+
+func (wc *WcBot) sendMsgEmoticon(con map[string]interface{}) error {
+	strUrl := fmt.Sprintf("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendemoticon?fun=sys&f=json&pass_ticket=%s", wc.passTicket)
+	jCon, err := json.Marshal(con)
+	if err != nil {
+		return err
+	}
+	body := fmt.Sprintf(`{"BaseRequest":{"Uin":%s,"Sid":"%s","Skey":"%s","DeviceID":"%s"},"Msg":%s,"Scene":0}`,
+		wc.uin, wc.sid, wc.sKey, wc.deviceId, jCon)
+
+	header := make(map[string]string)
+	header["Content-Type"] = `application/json;charset=UTF-8`
+	wc.httpClient.SetHeader(header)
+
+	_, err = wc.httpClient.PostString(strUrl, body)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	wc.httpClient.DelHeader(header)
+	return nil
+}
+
+func (wc *WcBot) sendMsgVideo(con map[string]interface{}) error {
+	strUrl := fmt.Sprintf("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendvideomsg?fun=async&f=json&pass_ticket=%s", wc.passTicket)
+	jCon, err := json.Marshal(con)
+	if err != nil {
+		return err
+	}
+	body := fmt.Sprintf(`{"BaseRequest":{"Uin":%s,"Sid":"%s","Skey":"%s","DeviceID":"%s"},"Msg":%s,"Scene":0}`,
+		wc.uin, wc.sid, wc.sKey, wc.deviceId, jCon)
+
+	header := make(map[string]string)
+	header["Content-Type"] = `application/json;charset=UTF-8`
+	wc.httpClient.SetHeader(header)
+
+	_, err = wc.httpClient.PostString(strUrl, body)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	wc.httpClient.DelHeader(header)
+	return nil
+}
+
+func (wc *WcBot) sendMsgFile(con map[string]interface{}) error {
+	strUrl := fmt.Sprintf("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendappmsg?fun=async&f=json&pass_ticket=%s", wc.passTicket)
+	jCon, err := json.Marshal(con)
+	if err != nil {
 		return err
 	}
 	body := fmt.Sprintf(`{"BaseRequest":{"Uin":%s,"Sid":"%s","Skey":"%s","DeviceID":"%s"},"Msg":%s,"Scene":0}`,
