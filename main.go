@@ -12,7 +12,10 @@ var (
 	Bot *wcbot.WcBot
 )
 
-func HandleMsg(msg models.RealRecvMsg) {
+type WeChatBot struct {
+}
+
+func (w *WeChatBot)HandleMessage(msg models.RealRecvMsg) {
 	//过滤不支持消息99
 	if msg.MsgType == 99 || msg.MsgTypeId == 99 {
 		return
@@ -34,8 +37,11 @@ func HandleMsg(msg models.RealRecvMsg) {
 }
 
 func main() {
-	Bot = wcbot.New(HandleMsg)
+	Bot = wcbot.New()
 	Bot.Debug = true
 	//Bot.QrCodeInTerminal() //默认在 wxqr 目录生成二维码，调用此函数，在终端打印二维码
+
+	Bot.AddHandler(&WeChatBot{})
+
 	Bot.Run()
 }
