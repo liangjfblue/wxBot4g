@@ -32,7 +32,9 @@ import (
 	qrcodetl "github.com/tuotoo/qrcode"
 )
 
-type HandleMsgAll func(models.RealRecvMsg)
+type Handler interface {
+	HandleMessage(models.RealRecvMsg)
+}
 
 type WcBot struct {
 	Debug          bool
@@ -75,7 +77,7 @@ type WcBot struct {
 	fileIndex           int
 	send2oss            bool
 	ossUrl              string
-	handleMsgAll        HandleMsgAll
+	handler        Handler
 }
 
 var (
@@ -90,7 +92,7 @@ var (
 	WechatBot *WcBot
 )
 
-func New(handleMsgAll HandleMsgAll) *WcBot {
+func New() *WcBot {
 	wcBot := new(WcBot)
 	wcBot.Debug = true
 	wcBot.QrCodeTerminal = false
@@ -136,7 +138,6 @@ func New(handleMsgAll HandleMsgAll) *WcBot {
 	wcBot.fileIndex = 0
 	wcBot.send2oss = false
 	wcBot.ossUrl = ""
-	wcBot.handleMsgAll = handleMsgAll
 	WechatBot = wcBot
 
 	if _, err := os.Stat(wcBot.tempPwd); err != nil {
@@ -1132,6 +1133,10 @@ func (wc *WcBot) extractMsgContent(msgTypeId int, msg models.RecvMsg) models.Con
 	return msgContent
 }
 
+func (wc *WcBot) AddHandler(handler Handler) {
+	wc.handler = handler
+}
+
 /**
 处理原始微信消息的内部函数
 	msg_type_id:
@@ -1206,6 +1211,6 @@ func (wc *WcBot) handleMsg(data models.RecvMsgs) {
 			CreateTime:   msg.CreateTime,
 			SendMsgUSer:  msgUser,
 		}
-		go wc.handleMsgAll(realMsg)
+		go wc.handler.HandleMessage(realMsg)
 	}
 }
