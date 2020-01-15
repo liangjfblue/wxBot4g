@@ -3,8 +3,6 @@ module wxBot4g
 go 1.12
 
 require (
-	github.com/546669204/golang-http-do v0.0.0-20180806031056-2047ec1931b3 // indirect
-	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394 // indirect
 	github.com/beevik/etree v1.1.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-gonic/gin v1.4.0
