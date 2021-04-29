@@ -1,108 +1,115 @@
-wxBot4g ÊÇ»ùÓÚgoµÄÎ¢ÐÅ»úÆ÷ÈË
+wxBot4g æ˜¯åŸºäºŽgoçš„å¾®ä¿¡æœºå™¨äºº
 
-## ¼¼Êõ
-- gin£¨http¿ò¼Ü£©
-- cron£¨¶¨Ê±ÈÎÎñ£©
-- etree£¨½âÎöxml£©
-- viper£¨ÅäÖÃÎÄ¼þ¶ÁÈ¡£©
-- logrus£¨ÈÕÖ¾¿ò¼Ü£©
-- go-qrcode£¨µÇÂ½¶þÎ¬ÂëÉú³É£©
+## æŠ€æœ¯
+- ginï¼ˆhttpæ¡†æž¶ï¼‰
+- cronï¼ˆå®šæ—¶ä»»åŠ¡ï¼‰
+- etreeï¼ˆè§£æžxmlï¼‰
+- viperï¼ˆé…ç½®æ–‡ä»¶è¯»å–ï¼‰
+- logrusï¼ˆæ—¥å¿—æ¡†æž¶ï¼‰
+- go-qrcodeï¼ˆç™»é™†äºŒç»´ç ç”Ÿæˆï¼‰
 
-## Ä¿Ç°Ö§³ÖµÄÏûÏ¢ÀàÐÍ
-### ºÃÓÑÏûÏ¢
-- [x] ÎÄ±¾
-- [x] Í¼Æ¬
-- [x] µØÀíÎ»ÖÃ
-- [x] ¸öÈËÃûÆ¬
-- [x] ÓïÒô
-- [x] Ð¡ÊÓÆµ
-- [ ] ¶¯»­
+## ç›®å‰æ”¯æŒçš„æ¶ˆæ¯ç±»åž‹
+### å¥½å‹æ¶ˆæ¯
+- [x] æ–‡æœ¬
+- [x] å›¾ç‰‡
+- [x] åœ°ç†ä½ç½®
+- [x] ä¸ªäººåç‰‡
+- [x] è¯­éŸ³
+- [x] å°è§†é¢‘
+- [ ] åŠ¨ç”»
 
-### ÈºÏûÏ¢
-- [x] ÎÄ±¾
-- [x] Í¼Æ¬
-- [x] µØÀíÎ»ÖÃ
-- [x] ¸öÈËÃûÆ¬
-- [x] ÓïÒô
-- [ ] ¶¯»­
+### ç¾¤æ¶ˆæ¯
+- [x] æ–‡æœ¬
+- [x] å›¾ç‰‡
+- [x] åœ°ç†ä½ç½®
+- [x] ä¸ªäººåç‰‡
+- [x] è¯­éŸ³
+- [ ] åŠ¨ç”»
 
-### TODO¹¦ÄÜ
-- [x] Ìá¹©restful api£¬·¢ËÍÏûÏ¢µ½Ö¸¶¨ºÃÓÑ/Èº
-- [ ] ÎÄ¼þ/Í¼Æ¬ÉÏ´«°¢ÀïÔÆoss
-- [ ] ¼àÌýÖ¸¶¨Èº±¨¾¯
-- [ ] ÁÄÌì¼ÇÂ¼ÖÐÎÄ·ÖÎö£¬Çé¸Ð·ÖÎö
+### TODOåŠŸèƒ½
+- [x] æä¾›restful apiï¼Œå‘é€æ¶ˆæ¯åˆ°æŒ‡å®šå¥½å‹/ç¾¤
+- [ ] æ–‡ä»¶/å›¾ç‰‡ä¸Šä¼ é˜¿é‡Œäº‘oss
+- [ ] ç›‘å¬æŒ‡å®šç¾¤æŠ¥è­¦
+- [ ] èŠå¤©è®°å½•ä¸­æ–‡åˆ†æžï¼Œæƒ…æ„Ÿåˆ†æž
 
-## Ê¹ÓÃÀý×Ó
-24ÐÐ´úÂë¾ÍÊµÏÖÎ¢ÐÅ»úÆ÷ÈËµÄ¼àÌýÏûÏ¢¹¦ÄÜ
+## ä½¿ç”¨ä¾‹å­
 
-    package main
+24è¡Œä»£ç å°±å®žçŽ°å¾®ä¿¡æœºå™¨äººçš„ç›‘å¬æ¶ˆæ¯åŠŸèƒ½
 
-    import (
-        "wxBot4g/models"
-        "wxBot4g/pkg/define"
-        "wxBot4g/wcbot"
-    
-        "github.com/sirupsen/logrus"
-    )
-    
-    func HandleMsg(msg models.RealRecvMsg) {
-        logrus.Debug("MsgType: ", msg.MsgType, " ", " MsgTypeId: ", msg.MsgTypeId)
-        logrus.Info(
-            "ÏûÏ¢ÀàÐÍ:", define.MsgIdString(msg.MsgType), " ",
-            "Êý¾ÝÀàÐÍ:", define.MsgTypeIdString(msg.MsgTypeId), " ",
-            "·¢ËÍÈË:", msg.SendMsgUSer.Name, " ",
-            "ÄÚÈÝ:", msg.Content.Data)
-    }
-    
-    func main() {
-        bot := wcbot.New(HandleMsg)
-        bot.Debug = true
-        bot.Run()
-    }
+```
+package main
 
+import (
+    "wxBot4g/models"
+    "wxBot4g/pkg/define"
+    "wxBot4g/wcbot"
 
-## ÏûÏ¢ÀàÐÍºÍÊý¾ÝÀàÐÍ
+    "github.com/sirupsen/logrus"
+)
 
-### MsgType£¨ÏûÏ¢ÀàÐÍ£©
+func HandleMsg(msg models.RealRecvMsg) {
+    logrus.Debug("MsgType: ", msg.MsgType, " ", " MsgTypeId: ", msg.MsgTypeId)
+    logrus.Info(
+        "æ¶ˆæ¯ç±»åž‹:", define.MsgIdString(msg.MsgType), " ",
+        "æ•°æ®ç±»åž‹:", define.MsgTypeIdString(msg.MsgTypeId), " ",
+        "å‘é€äºº:", msg.SendMsgUSer.Name, " ",
+        "å†…å®¹:", msg.Content.Data)
+}
 
-Êý¾ÝÀàÐÍ±àºÅ|Êý¾ÝÀàÐÍ|ËµÃ÷
---|--|--|
-0|Init|³õÊ¼»¯ÏûÏ¢£¬ÄÚ²¿Êý¾Ý
-1|Self|×Ô¼º·¢ËÍµÄÏûÏ¢
-2|FileHelper|ÎÄ¼þÏûÏ¢
-3|Group|ÈºÏûÏ¢
-4|Contact|ÁªÏµÈËÏûÏ¢
-5|Public|¹«ÖÚºÅÏûÏ¢
-6|Special|ÌØÊâÕËºÅÏûÏ¢
-51|»ñÈ¡wxid|»ñÈ¡wxidÏûÏ¢
-99|Unknown|Î´ÖªÕËºÅÏûÏ¢
+func main() {
+    bot := wcbot.New(HandleMsg)
+    bot.Debug = true
+    bot.Run()
+}
+```
 
+## æ¶ˆæ¯ç±»åž‹å’Œæ•°æ®ç±»åž‹
 
-### MsgTypeId£¨Êý¾ÝÀàÐÍ£©
+### MsgTypeï¼ˆæ¶ˆæ¯ç±»åž‹ï¼‰
 
-Êý¾ÝÀàÐÍ±àºÅ|Êý¾ÝÀàÐÍ|ËµÃ÷
---|--|--|
-0|Text|ÎÄ±¾ÏûÏ¢µÄ¾ßÌåÄÚÈÝ
-1|Location|µØÀíÎ»ÖÃ
-3|Image|Í¼Æ¬Êý¾ÝµÄurl£¬HTTP POSTÇëÇó´Ëurl¿ÉÒÔµÃµ½jpgÎÄ¼þ¸ñÊ½µÄÊý¾Ý
-4|Voice|ÓïÒôÊý¾ÝµÄurl£¬HTTP POSTÇëÇó´Ëurl¿ÉÒÔµÃµ½mp3ÎÄ¼þ¸ñÊ½µÄÊý¾Ý
-5|Recommend|°üº¬ nickname (êÇ³Æ)£¬ alias (±ðÃû)£¬province (Ê¡·Ý)£¬city (³ÇÊÐ)£¬ gender (ÐÔ±ð)×Ö¶Î
-6|Animation|¶¯»­url, HTTP POSTÇëÇó´Ëurl¿ÉÒÔµÃµ½gifÎÄ¼þ¸ñÊ½µÄÊý¾Ý
-7|Share|×Öµä£¬°üº¬ type (ÀàÐÍ)£¬title (±êÌâ)£¬desc (ÃèÊö)£¬url (Á´½Ó)£¬from (Ô´ÍøÕ¾)×Ö¶Î
-8|Video|ÊÓÆµ£¬Î´Ö§³Ö
-9|VideoCall|ÊÓÆµµç»°£¬Î´Ö§³Ö
-10|Redraw|³·»ØÏûÏ¢
-11|Empty|ÄÚÈÝ£¬Î´Ö§³Ö
-99|Unknown|Î´Ö§³Ö
+| æ•°æ®ç±»åž‹ç¼–å· | æ•°æ®ç±»åž‹   | è¯´æ˜Ž                 |
+| ------------ | ---------- | -------------------- |
+| 0            | Init       | åˆå§‹åŒ–æ¶ˆæ¯ï¼Œå†…éƒ¨æ•°æ® |
+| 1            | Self       | è‡ªå·±å‘é€çš„æ¶ˆæ¯       |
+| 2            | FileHelper | æ–‡ä»¶æ¶ˆæ¯             |
+| 3            | Group      | ç¾¤æ¶ˆæ¯               |
+| 4            | Contact    | è”ç³»äººæ¶ˆæ¯           |
+| 5            | Public     | å…¬ä¼—å·æ¶ˆæ¯           |
+| 6            | Special    | ç‰¹æ®Šè´¦å·æ¶ˆæ¯         |
+| 51           | èŽ·å–wxid   | èŽ·å–wxidæ¶ˆæ¯         |
+| 99           | Unknown    | æœªçŸ¥è´¦å·æ¶ˆæ¯         |
 
-## ¹¦ÄÜapi
-### ·¢ËÍÎÄ±¾ÏûÏ¢(ºÃÓÑ/Èº)
-```http://127.0.0.1:7788/v1/msg/text?to=²âÊÔÈº&word=ÄãºÃ, ²âÊÔÒ»ÏÂ&appKey=khr1244o1oh```
+### MsgTypeIdï¼ˆæ•°æ®ç±»åž‹ï¼‰
 
-### ·¢ËÍÍ¼Æ¬ÏûÏ¢(ºÃÓÑ/Èº)
-Çë²Î¿¼```wxBot4g/wcbot/imageHandle_test.go```
+| æ•°æ®ç±»åž‹ç¼–å· | æ•°æ®ç±»åž‹  | è¯´æ˜Ž                                                         |
+| ------------ | --------- | ------------------------------------------------------------ |
+| 0            | Text      | æ–‡æœ¬æ¶ˆæ¯çš„å…·ä½“å†…å®¹                                           |
+| 1            | Location  | åœ°ç†ä½ç½®                                                     |
+| 3            | Image     | å›¾ç‰‡æ•°æ®çš„urlï¼ŒHTTP POSTè¯·æ±‚æ­¤urlå¯ä»¥å¾—åˆ°jpgæ–‡ä»¶æ ¼å¼çš„æ•°æ®   |
+| 4            | Voice     | è¯­éŸ³æ•°æ®çš„urlï¼ŒHTTP POSTè¯·æ±‚æ­¤urlå¯ä»¥å¾—åˆ°mp3æ–‡ä»¶æ ¼å¼çš„æ•°æ®   |
+| 5            | Recommend | åŒ…å« nickname (æ˜µç§°)ï¼Œ alias (åˆ«å)ï¼Œprovince (çœä»½)ï¼Œcity (åŸŽå¸‚)ï¼Œ gender (æ€§åˆ«)å­—æ®µ |
+| 6            | Animation | åŠ¨ç”»url, HTTP POSTè¯·æ±‚æ­¤urlå¯ä»¥å¾—åˆ°gifæ–‡ä»¶æ ¼å¼çš„æ•°æ®         |
+| 7            | Share     | å­—å…¸ï¼ŒåŒ…å« type (ç±»åž‹)ï¼Œtitle (æ ‡é¢˜)ï¼Œdesc (æè¿°)ï¼Œurl (é“¾æŽ¥)ï¼Œfrom (æºç½‘ç«™)å­—æ®µ |
+| 8            | Video     | è§†é¢‘ï¼Œæœªæ”¯æŒ                                                 |
+| 9            | VideoCall | è§†é¢‘ç”µè¯ï¼Œæœªæ”¯æŒ                                             |
+| 10           | Redraw    | æ’¤å›žæ¶ˆæ¯                                                     |
+| 11           | Empty     | å†…å®¹ï¼Œæœªæ”¯æŒ                                                 |
+| 99           | Unknown   | æœªæ”¯æŒ                                                       |
+
+## åŠŸèƒ½api
+
+### å‘é€æ–‡æœ¬æ¶ˆæ¯(å¥½å‹/ç¾¤)
+
+```
+http://127.0.0.1:7788/v1/msg/text?to=æµ‹è¯•ç¾¤&word=ä½ å¥½, æµ‹è¯•ä¸€ä¸‹&appKey=khr1244o1oh
+```
+
+### å‘é€å›¾ç‰‡æ¶ˆæ¯(å¥½å‹/ç¾¤)
+
+è¯·å‚è€ƒ`wxBot4g/wcbot/imageHandle_test.go`
 
 v1.1
-- Ôö¼ÓÖÕ¶Ë¶þÎ¬ÂëÉ¨ÂëµÇÂ¼
-- Ôö¼Óapi£¬·¢ËÍÎÄ±¾¡¢Í¼Æ¬ÏûÏ¢µ½Ö¸¶¨Èº
-- Ôö¼Óµ¥Ôª²âÊÔ
+
+- å¢žåŠ ç»ˆç«¯äºŒç»´ç æ‰«ç ç™»å½•
+- å¢žåŠ apiï¼Œå‘é€æ–‡æœ¬ã€å›¾ç‰‡æ¶ˆæ¯åˆ°æŒ‡å®šç¾¤
+- å¢žåŠ å•å…ƒæµ‹è¯•
